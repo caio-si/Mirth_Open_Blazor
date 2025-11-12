@@ -1,0 +1,23 @@
+.card {
+    border-radius: 0.5rem;
+}
+
+.card-header select {
+    min-width: 160px;
+}
+
+.badge {
+    font-size: 0.85rem;
+}
+
+table td {
+    vertical-align: middle;
+}
+
+.table-responsive {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+
+

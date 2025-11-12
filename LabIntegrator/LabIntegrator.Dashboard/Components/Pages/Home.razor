@@ -1,0 +1,157 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+@using LabIntegrator.Core.Contracts.Channels
+@using LabIntegrator.Core.Contracts.Messages
+@using LabIntegrator.Dashboard.Services
+@inject ChannelDataProvider ChannelDataProvider
+@inject MessageDataProvider MessageDataProvider
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>Visão Geral</h1>
+
+<div class="row gy-4">
+    <div class="col-12 col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <strong>Canais de Integração</strong>
+            </div>
+            <div class="card-body">
+                @if (_channels is null)
+                {
+                    <p>Carregando canais...</p>
+                }
+                else if (_channels.Count == 0)
+                {
+                    <p>Nenhum canal cadastrado.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var channel in _channels)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>@channel.Name</strong><br />
+                                    <small class="text-muted">@channel.Description</small>
+                                </div>
+                                <span class="badge bg-secondary">@channel.TotalMessages</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between">
+                <strong>Mensagens Recentes</strong>
+                <select class="form-select form-select-sm w-auto" @onchange="OnChannelFilterChanged">
+                    <option value="">Todos os canais</option>
+                    @if (_channels is not null)
+                    {
+                        @foreach (var channel in _channels)
+                        {
+                            <option value="@channel.Id">@channel.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="card-body">
+                @if (_messages is null)
+                {
+                    <p>Carregando mensagens...</p>
+                }
+                else if (_messages.Count == 0)
+                {
+                    <p>Nenhuma mensagem encontrada no período.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Canal</th>
+                                    <th>ExternalId</th>
+                                    <th>Tipo</th>
+                                    <th>Status</th>
+                                    <th>Recebida em</th>
+                                    <th>Resultados</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var message in _messages)
+                                {
+                                    var channelName = _channels?.FirstOrDefault(c => c.Id == message.ChannelId)?.Name ?? "Desconhecido";
+                                    <tr>
+                                        <td>@channelName</td>
+                                        <td>@message.ExternalId</td>
+                                        <td>@message.Type</td>
+                                        <td>
+                                            <span class="badge @GetStatusBadge(message.Status)">
+                                                @message.Status
+                                            </span>
+                                        </td>
+                                        <td>@message.ReceivedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>@message.Results.Count</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyCollection<ChannelDto>? _channels;
+    private IReadOnlyCollection<MessageDto>? _messages;
+    private Guid? _selectedChannelId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _channels = await ChannelDataProvider.GetChannelsAsync();
+        _messages = await MessageDataProvider.GetMessagesAsync(_selectedChannelId);
+    }
+
+    private async Task OnChannelFilterChanged(ChangeEventArgs args)
+    {
+        if (Guid.TryParse(args.Value?.ToString(), out var channelId))
+        {
+            _selectedChannelId = channelId;
+        }
+        else
+        {
+            _selectedChannelId = null;
+        }
+
+        _messages = await MessageDataProvider.GetMessagesAsync(_selectedChannelId);
+        StateHasChanged();
+    }
+
+    private static string GetStatusBadge(Core.Enums.MessageStatus status)
+        => status switch
+        {
+            Core.Enums.MessageStatus.Received => "bg-warning text-dark",
+            Core.Enums.MessageStatus.Processed => "bg-success",
+            Core.Enums.MessageStatus.Failed => "bg-danger",
+            _ => "bg-secondary"
+        };
+}
+@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
